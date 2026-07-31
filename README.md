@@ -153,6 +153,6 @@ This project provided hands-on experience with:
 
 📧 zaidihamza1373@gmail.com
 
-💼 LinkedIn: https://linkedin.com/in/hamza-zaidi
+💼 LinkedIn: www.linkedin.com/in/hamza-zaidi-789b84262
 
 ⭐ If you found this project useful, consider giving it a **Star** on GitHub!
