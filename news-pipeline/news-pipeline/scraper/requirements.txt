@@ -1,0 +1,6 @@
+requests==2.31.0
+beautifulsoup4==4.12.2
+lxml==5.1.0
+kafka-python==2.0.2
+minio==7.2.3
+langdetect==1.0.9

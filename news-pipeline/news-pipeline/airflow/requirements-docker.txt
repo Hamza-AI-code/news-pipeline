@@ -1,0 +1,7 @@
+minio==7.2.3
+langdetect==1.0.9
+psycopg2-binary==2.9.9
+beautifulsoup4==4.12.3
+lxml==5.1.0
+requests==2.31.0
+kafka-python==2.0.2

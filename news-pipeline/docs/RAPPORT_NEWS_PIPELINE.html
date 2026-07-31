@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Rapport — Plateforme collecte & analyse d’actualités</title>
+  <style>
+    body { font-family: Georgia, 'Times New Roman', serif; max-width: 900px; margin: 2rem auto; padding: 0 1.5rem; color: #1a1a1a; line-height: 1.55; }
+    h1 { font-size: 1.75rem; border-bottom: 2px solid #333; padding-bottom: 0.35rem; }
+    h2 { font-size: 1.25rem; margin-top: 1.75rem; color: #222; }
+    h3 { font-size: 1.05rem; margin-top: 1rem; }
+    .meta { background: #f4f4f4; padding: 1rem; border-radius: 6px; margin: 1rem 0; }
+    code, pre { font-family: Consolas, monospace; font-size: 0.9rem; background: #f0f0f0; padding: 0.1rem 0.35rem; border-radius: 4px; }
+    pre { padding: 0.75rem; overflow-x: auto; }
+    ul { margin: 0.5rem 0 0.5rem 1.2rem; }
+    .warn { border-left: 4px solid #c60; padding-left: 0.75rem; margin: 1rem 0; background: #fff8f0; }
+    .ok { border-left: 4px solid #080; padding-left: 0.75rem; margin: 1rem 0; background: #f4fff4; }
+    table { border-collapse: collapse; width: 100%; margin: 0.75rem 0; font-size: 0.95rem; }
+    th, td { border: 1px solid #ccc; padding: 0.45rem 0.5rem; text-align: left; }
+    th { background: #eee; }
+    @media print { body { margin: 0; max-width: 100%; } a[href^="http"]::after { content: ""; } }
+  </style>
+</head>
+<body>
+
+<h1>Rapport de projet — Architecture de données<br /><span style="font-size:1rem;font-weight:normal">Collecte et analyse des actualités (web scraping)</span></h1>
+
+<div class="meta">
+  <strong>Équipe :</strong> Zaidi Hamza — Elmer — Abdellah Mamdouh<br />
+  <strong>Projet :</strong> plateforme Big Data (scraping, lac MinIO, Kafka, Airflow, PostgreSQL, Grafana)<br />
+  <strong>Document :</strong> rapport technique + guide d’exploitation (imprimer ou « Enregistrer au format PDF » depuis le navigateur)
+</div>
+
+<h2>1. Contexte et objectifs</h2>
+<p>Les médias publient chaque jour un volume important d’articles. Ce projet met en place une <strong>architecture distribuée</strong> pour : collecter automatiquement des articles depuis plusieurs sites ; les ingérer en <strong>batch</strong> et en <strong>streaming</strong> ; les stocker dans un <strong>data lake</strong> (MinIO) selon une <strong>architecture médaillon</strong> (bronze / silver / gold) ; les transformer (ETL) ; alimenter un <strong>entrepôt PostgreSQL</strong> ; contrôler la <strong>qualité</strong> des données ; documenter la <strong>gouvernance</strong> ; et <strong>visualiser</strong> les tendances (Grafana).</p>
+
+<h2>2. Architecture technique</h2>
+<ul>
+  <li><strong>Scraping</strong> : Python, BeautifulSoup, <code>requests</code> — sources configurées (Maroc + international).</li>
+  <li><strong>Ingestion</strong> : événements JSON vers <strong>Kafka</strong> (topic <code>raw-articles</code>) + fichiers JSON dans MinIO <strong>bronze</strong>.</li>
+  <li><strong>Streaming</strong> : consumer Kafka → nettoyage léger → MinIO <strong>silver</strong>.</li>
+  <li><strong>Batch</strong> : DAG Apache <strong>Airflow</strong> (<code>news_pipeline</code>) planifié à l’heure : scraping one-shot → bronze→silver → silver→gold (DW + résumé JSON dans MinIO gold).</li>
+  <li><strong>Data Warehouse</strong> : PostgreSQL (<code>news_dw</code>) — tables de faits et d’agrégats (par jour, source, thème, pays, mots-clés, contrôles DQ).</li>
+  <li><strong>Visualisation</strong> : Grafana connecté au DW.</li>
+</ul>
+
+<h2>3. Cartographie des services (Docker)</h2>
+<table>
+  <tr><th>Service</th><th>Rôle</th><th>Accès local typique</th></tr>
+  <tr><td>airflow-webserver</td><td>Interface web (UI)</td><td>http://localhost:8080 (admin / admin)</td></tr>
+  <tr><td>airflow-scheduler</td><td>Exécution des DAG</td><td>logs Docker</td></tr>
+  <tr><td>airflow-init</td><td>Migration DB + création admin (une fois)</td><td>job terminé (Exited 0)</td></tr>
+  <tr><td>postgres</td><td>DW + métadonnées Airflow</td><td>port 5432</td></tr>
+  <tr><td>minio</td><td>Data lake S3-compatible</td><td>http://localhost:9001</td></tr>
+  <tr><td>kafka + zookeeper</td><td>Bus d’événements</td><td>9092</td></tr>
+  <tr><td>scraper</td><td>Collecte périodique</td><td>logs Docker</td></tr>
+  <tr><td>kafka_consumer</td><td>Streaming vers silver</td><td>logs Docker</td></tr>
+  <tr><td>grafana</td><td>Dashboards</td><td>http://localhost:3000</td></tr>
+</table>
+
+<h2>4. Schéma du pipeline Airflow</h2>
+<p><code>scrape_articles</code> → <code>bronze_to_silver</code> → <code>silver_to_gold</code> → <code>data_quality_check</code></p>
+<p>Le scraper lancé par Airflow utilise la variable d’environnement <code>SCRAPER_ONCE=1</code> pour une exécution unique (sans boucle infinie).</p>
+
+<h2>5. Qualité et gouvernance</h2>
+<ul>
+  <li><strong>Qualité</strong> : contrôles sur titres vides, dates, contenu court, URLs invalides, doublons — enregistrement dans <code>dq_checks</code> avec dimension (complétude, validité, cohérence).</li>
+  <li><strong>Gouvernance</strong> : inventaire <code>data_catalog</code> décrivant les jeux de données et couches (bronze, silver, gold, ingestion).</li>
+</ul>
+
+<h2>6. Déploiement</h2>
+<pre>cd news-pipeline
+docker compose build airflow scraper
+docker compose up -d</pre>
+<p>Premier démarrage : le build <strong>airflow</strong> installe les dépendances Python dans l’image (plus fiable que l’installation à chaud au démarrage).</p>
+
+<h2>7. Pourquoi l’interface Airflow peut « ne pas fonctionner » — causes et solutions</h2>
+
+<h3>7.1 Le navigateur affiche « impossible d’accéder au site »</h3>
+<ul>
+  <li><strong>Cause</strong> : conteneur pas encore prêt ou arrêté.</li>
+  <li><strong>Solution</strong> : <code>docker compose ps</code> — <code>airflow-webserver</code> doit être <code>Up</code>. Sinon <code>docker compose logs airflow-webserver --tail 150</code> et <code>docker compose logs airflow-init</code>.</li>
+</ul>
+
+<h3>7.2 Délai long avant que le port 8080 réponde</h3>
+<ul>
+  <li><strong>Cause</strong> : migration <code>airflow db migrate</code>, création utilisateur, démarrage webserver + scheduler.</li>
+  <li><strong>Solution</strong> : attendre 2–5 minutes après <code>up -d</code> ; surveiller les logs jusqu’à voir le webserver écouter.</li>
+</ul>
+
+<h3>7.3 Port 8080 déjà utilisé (conflit)</h3>
+<ul>
+  <li><strong>Cause</strong> : autre application sur 8080.</li>
+  <li><strong>Solution</strong> : libérer le port ou modifier dans <code>docker-compose.yml</code> la publication, ex. <code>"8081:8080"</code> puis ouvrir http://localhost:8081</li>
+</ul>
+
+<h3>7.4 PostgreSQL pas prêt au moment de la migration Airflow</h3>
+<ul>
+  <li><strong>Cause</strong> : course au démarrage.</li>
+  <li><strong>Solution</strong> : le compose utilise un <strong>healthcheck</strong> Postgres ; si problème persiste, <code>docker compose restart airflow</code>.</li>
+</ul>
+
+<h3>7.5 Docker Desktop — mémoire insuffisante</h3>
+<ul>
+  <li><strong>Cause</strong> : Airflow + Kafka + autres services consomment de la RAM.</li>
+  <li><strong>Solution</strong> : Docker Desktop → Settings → Resources → augmenter la RAM (ex. ≥ 6 Go si possible).</li>
+</ul>
+
+<h3>7.6 URL incorrecte</h3>
+<ul>
+  <li><strong>Solution</strong> : utiliser <code>http://127.0.0.1:8080</code> au lieu de <code>localhost</code> si résolution DNS locale pose problème.</li>
+</ul>
+
+<div class="ok">
+<strong>Identifiants par défaut (démo) :</strong> utilisateur <code>admin</code>, mot de passe <code>admin</code> — à changer en environnement réel.
+</div>
+
+<h2>8. Limites et évolutions</h2>
+<ul>
+  <li>Les sélecteurs HTML des sites évoluent : le scraping peut nécessiter des mises à jour.</li>
+  <li>La détection de « fake news » est mentionnée comme piste (catalogue) ; un modèle ML serait une extension.</li>
+  <li>Séparer la base métadonnées Airflow de la base <code>news_dw</code> serait recommandé en production.</li>
+</ul>
+
+<h2>9. Conclusion</h2>
+<p>La solution respecte les exigences du sujet : collecte multi-sources, ingestion batch et streaming, lac MinIO, médaillon, ETL orchestré par Airflow, entrepôt analytique, contrôles de qualité, inventaire de gouvernance et visualisation Grafana. L’équipe (Zaidi Hamza, Elmer, Abdellah Mamdouh) peut s’appuyer sur ce rapport et sur la présentation PowerPoint générée dans le dossier <code>docs/</code> pour la soutenance.</p>
+
+<p style="margin-top:2rem;font-size:0.9rem;color:#555;">Fin du rapport — imprimer depuis le navigateur (Ctrl+P) → Destination « Enregistrer au format PDF ».</p>
+
+</body>
+</html>

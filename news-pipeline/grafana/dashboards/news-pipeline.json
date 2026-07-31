@@ -1,0 +1,175 @@
+{
+  "annotations": { "list": [] },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": { "type": "postgres", "uid": "news_pg" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 0 },
+      "id": 1,
+      "options": { "showHeader": true, "sortBy": [] },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "news_pg" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM v_today_by_source;",
+          "refId": "A"
+        }
+      ],
+      "title": "Nombre d'articles par source (aujourd'hui)",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "news_pg" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 0 },
+      "id": 2,
+      "options": { "showHeader": true },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "news_pg" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT keyword, total_freq FROM v_top_keywords_week LIMIT 20;",
+          "refId": "A"
+        }
+      ],
+      "title": "Mots-clés les plus fréquents (7 jours)",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "news_pg" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "id": 3,
+      "options": { "showHeader": true },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "news_pg" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT source, total_articles, avg_per_day FROM v_trends_7d;",
+          "refId": "A"
+        }
+      ],
+      "title": "Tendances d'actualité (7 jours, par source)",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "news_pg" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "id": 4,
+      "options": { "showHeader": true },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "news_pg" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM v_today_by_country;",
+          "refId": "A"
+        }
+      ],
+      "title": "Articles par pays (marché média)",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "news_pg" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "id": 5,
+      "options": { "showHeader": true },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "news_pg" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM v_today_by_theme LIMIT 25;",
+          "refId": "A"
+        }
+      ],
+      "title": "Articles par thème (rubrique)",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "news_pg" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "id": 6,
+      "options": { "showHeader": true },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "news_pg" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT * FROM v_articles_last_7_days;",
+          "refId": "A"
+        }
+      ],
+      "title": "Volume agrégé par jour (DW)",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "news_pg" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "id": 7,
+      "options": { "showHeader": true },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "news_pg" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT dataset_name, layer, owner, LEFT(description, 80) AS description FROM data_catalog ORDER BY layer, dataset_name;",
+          "refId": "A"
+        }
+      ],
+      "title": "Gouvernance — inventaire des jeux de données",
+      "type": "table"
+    },
+    {
+      "datasource": { "type": "postgres", "uid": "news_pg" },
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "id": 8,
+      "options": { "showHeader": true },
+      "targets": [
+        {
+          "datasource": { "type": "postgres", "uid": "news_pg" },
+          "editorMode": "code",
+          "format": "table",
+          "rawQuery": true,
+          "rawSql": "SELECT check_date, check_name, issue_count, severity, dq_dimension FROM v_dq_latest LIMIT 20;",
+          "refId": "A"
+        }
+      ],
+      "title": "Qualité des données — derniers contrôles",
+      "type": "table"
+    }
+  ],
+  "refresh": "30s",
+  "schemaVersion": 39,
+  "style": "dark",
+  "tags": ["news", "bigdata", "architecture-donnees"],
+  "templating": { "list": [] },
+  "time": { "from": "now-7d", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Veille medias — architecture donnees",
+  "uid": "news-pipeline",
+  "version": 2,
+  "weekStart": ""
+}
